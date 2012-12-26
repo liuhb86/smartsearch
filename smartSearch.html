@@ -5,12 +5,15 @@
 <title>BiLSearch</title>
 <script src="http://code.jquery.com/jquery-1.8.3.min.js" type="text/javascript">
 </script>
-<script src="jquery.query-2.1.7.min.js"></script>
+<script src="jquery.query-2.1.7.min.js" type="text/javascript"></script>
+<script src="jsrender.js" type="text/javascript"></script>
 <style>
-body, div {
-	overflow: hidden;
+body, div, ol, li, img {
 	margin: 0;
 	padding: 0;
+}
+body {
+	overflow: hidden;
 }
 #resultFrame {
 	width: 100%;
@@ -19,10 +22,31 @@ body, div {
 	padding: 0;
 }
 #searchBar {
-	padding: 5px;
+	padding: 2px;
 	width : 100%;
 	position: absolute;
 	background-color: rgba(50,50,50,.5);
+}
+#queryInput {
+	width : 30%;
+}
+#searchEngines {
+	list-style : none;
+	display: inline;
+	vertical-align: middle;
+}
+#searchEngines .active {
+	border: solid 2px white;
+}
+.search-engine-item {
+	display: inline-block;
+	vertical-align: middle;
+	cursor : pointer;
+	border: solid 2px rgba(0,0,0,0);
+}
+.search-engine-item img {
+	height: 20px;
+	width : 20px;
 }
 </style>
 </head>
@@ -30,123 +54,206 @@ body, div {
 	<div id="searchBar">
 		<input type="text" id="queryInput"></input>
 		<button id="searchButton">Search</button>
-		<span id="searchEngines">
-		</span>
+		<ol id="searchEngines">
+		</ol>
 	</div>
 	<iframe id="resultFrame">
 	</iframe>
 </body>
-<script type="text/javascript">
+<script id="searchEngineTmpl" type="text/x-jsrender" for="searchEngines">
+		<li class="search-engine-item" title="{{:title}}" index="{{:#index}}"><img src="{{:icon}}" alt="{{:title"}></img></li>
+</script>
 
-(function() {
-var self = window.smartSearch = {
+<script type="text/javascript">
+window.smartSearch = {};
+
+smartSearch.util = {
+	getDomainFromUrl : function (url){
+		var match = url && url.match(/:\/\/([^\/]*)/);
+		if (match) {
+			return match[1];
+		} else {
+			return null;
+		}
+	},
+	getFaviconUrl : function (domain) {
+		return "http://www.google.com/s2/favicons?domain=" + domain;
+	}
+};
+(function(p) {
+var self = p.service = {
 	config : {
 	},
 	runtime : {
+		engineList : []
 	},
 	searchEngines : {
-		baidu : {
+		smart : {
+			title : "Smart",
+			icon : "img/logo.png"
+		},
+		baidu : { 
 			title : "Baidu",
 			url : "http://www.baidu.com/s?ie=utf-8&wd="
 		},
-		bing : {
-			icon : "",
+		bing: {
 			title : "Bing",
 			url : "http://www.bing.com/search?q="
 		},
 		google : {
 			title : "Google",
-			url : "http://www.google.com/custom?ie=utf-8&q="		//Ref to baigoogledu.com for XFrame wor
+			url : "http://www.google.com/custom?ie=utf-8&q="		//Ref to baigoogledu.com for XFrame workaround
 		}
 	},
-	util : {
-		getDomainFromUrl : function (url){
-			var match = url && url.match(/:\/\/([^\/]*)/);
-			if (match) {
-				console.log(match[1]);
-				return match[1];
-			} else {
-				return null;
-			}
-		},
-		getIcon : function (engine) {
-			if (engine.icon && engine.icon.length) return engine.icon;
-			return "http://www.google.com/s2/favicons?domain="+self.util.getDomainFromUrl(engine.url);
-		}
+	getIconForSearchEngine : function (engine) {
+		if (! (engine.icon && engine.icon.length))
+			engine.icon = p.util.getFaviconUrl(p.util.getDomainFromUrl(engine.url));
+		return engine.icon; 
 	},
-	doSearch : function (query) {
-		var i, strEngine, navUrl,
-			isPureAscii = true;		
+	chooseEngineByContent : function (query) {
+		var i, strEngine, 
+			isPureAscii = true;
 		for (i = 0; i < query.length; ++i) {
 			if (query.charCodeAt(i) > 127) {
 				isPureAscii = false;
-				break;			
+				break;
 			}
 		}
 		strEngine = isPureAscii ? "google" : "baidu";
-		navUrl = self.searchEngines[strEngine].url + query;
-		self.doNavigate(navUrl, query);
+		return self.searchEngines[strEngine];
 	},
-	doNavigate : function (url, query) {
-		self.controller.setFrameUrl(url);
-		self.controller.setTitle(query);
-		self.controller.setUrlHash(query);
+	chooseEngine : function (query) {
+		if (self.runtime.activeEngine !== self.searchEngines.smart) 
+			return self.runtime.activeEngine;
+		return self.chooseEngineByContent(query);
 	},
-
-	init : function () {
-		self.controller.init();
-		if (self.runtime.query) {
-			self.doSearch(self.runtime.query);
+	changeEngineByIndex : function (index) {
+		var e = index ? self.runtime.engineList[index] : undefined;
+		if (e!== self.runtime.activeEngine) {
+			self.runtime.activeEngine = e;
+			return true;
+		} else {
+			return false;
 		}
-	}
-}})();
-(function () {
-var self= smartSearch.controller = {
-	model : smartSearch,
-	setFrameUrl : function (url) { $("#resultFrame")[0].src = url; },
-	setTitle : function (query) { window.title = query + " - BiLSearch"; },
-	setUrlHash : function (hash) { window.location.hash = hash; },
-	onSearch : function () {
-		var query = $("#queryInput").val();
-			self.model.doSearch(query);
 	},
-	onResize : function () {
-		$("#resultFrame").height(window.innerHeight);	
+	getSearchUrl : function (query) {
+		var navUrl, engine;
+		engine = self.chooseEngine(query);
+		navUrl = engine.url + encodeURIComponent(query);
+		return navUrl;
+	},
+	init : function () {
+		var i, engine;
+		for (i in self.searchEngines) {
+			engine = self.searchEngines[i];
+			engine.id = i;
+			self.getIconForSearchEngine(engine);
+			self.runtime.engineList.push(engine);
+		}
+		self.runtime.activeEngine = self.searchEngines.smart;
+	}
+};
+})(smartSearch);
+
+(function (p) {
+var self = p.view = {
+	setFrameUrl : function (url) { self.$resultFrame[0].src = url; },
+	setTitle : function (str) { window.title = str + " - BiLSearch"; },
+	setUrlHash : function () { window.location.hash = self.hash.toString(); },
+	setUrlParam : function (key, val) {
+		if (val)
+			self.hash.SET(key,val); 
+		else
+			self.hash.REMOVE(key);
+		self.setUrlHash();
+	},
+	getUrlParam : function (key) { return self.hash.get(key) || $.query.get(key); },
+	getUrlQuery : function () { return self.getUrlParam("q"); },
+	setUrlQuery : function (q) { self.setUrlParam("q", q); },
+	getUrlEngine : function () { return self.getUrlParam("e"); },
+	setUrlEngine : function (e) { self.setUrlParam("e", e=="smart" ? null : e); },
+	getQuery : function () { return self.$queryInput.val(); },
+	setQuery : function (q) { self.$queryInput.val(q); },
+	addSearchEngineIcons : function (engines) {
+		$("#searchEngines").append($("#searchEngineTmpl").render(engines));
+		self.$searchEngineItems = $(".search-engine-item");
+	},
+	adjustFrameHeight : function () {
+		self.$resultFrame.height(window.innerHeight);
+	},
+	changeEngine : function (index) {
+		var $current;
+		self.$activeEngine.removeClass("active");
+		if (index) {
+			$current = self.$searchEngineItems.filter("[index='"+index+"']");
+		} else {
+			$current = self.$smartSearchItem;
+		}
+		$current.addClass("active");
+		self.$activeEngine = $current;
 	},
 	bindEvents : function () {
-		$("#searchButton").click(self.onSearch);
-		$("#queryInput").keypress(function (event) {
-			if	(event.which == 13) {
-				self.onSearch();	
-			}
-		});
-		$(window).resize(self.onResize);
-	},
-	addSearchEngineButtons : function () {
-		var strEngine, engine;
-		for (strEngine in self.model.searchEngines) {
-			engine = self.model.searchEngines[strEngine];
-			$("#searchEngines").append("<a><img src='" + self.model.util.getIcon(engine) + "'></img></a>");
-		}
+		$(window).resize(self.adjustFrameHeight);
 	},
 	init : function () {
-		var query;
-		self.onResize();
-		self.addSearchEngineButtons();
+		self.hash = $.query.load(window.location.hash);
+		self.$resultFrame = $("#resultFrame");
+		self.$queryInput = $("#queryInput");
+		self.$searchButton = $("#searchButton");
+		self.$smartSearchItem = $("#smartSearchItem");
+		self.$activeEngine = self.$smartSearchItem;
+		self.adjustFrameHeight();
 		self.bindEvents();
-		if (window.location.hash && window.location.hash.length > 1) {
-			query = window.location.hash.substr(1);
-		} else {
-			query = $.query.get("q");
-		}
-		self.model.runtime.query = query;
-		$("#queryInput").val(query);
 	}
-}})();
+};
+})(smartSearch);
 
+(function (p) {
+var self= p.app = {
+	service : p.service,
+	view : p.view,
+	onSearch : function () {
+		var query, navUrl;
+		query = self.view.getQuery();
+		navUrl = self.service.getSearchUrl(query);
+		self.view.setTitle(query);
+		self.view.setUrlQuery(query);
+		self.view.setFrameUrl(navUrl);
+	},
+	onChangeEngine : function (index) {
+		if (!self.service.changeEngineByIndex(index)) return;
+		self.view.setUrlEngine(self.service.runtime.activeEngine.id);
+		self.view.changeEngine(index);
+		self.onSearch();
+	},
+	bindEvents : function () {
+		self.view.$searchButton.click(self.onSearch);
+		self.view.$queryInput.keypress(function (event) {
+			if	(event.which == 13) {
+				self.onSearch();
+			}
+		});
+		self.view.$searchEngineItems.click(function (){
+			self.onChangeEngine($(this).attr("index"));
+		});
+	},
+	init : function () {
+		self.service.init();
+		self.view.init();
+		var query;
+		self.view.addSearchEngineIcons(self.service.runtime.engineList);
+		self.bindEvents();
+		query = self.view.getUrlQuery();
+		self.service.runtime.query = query;
+		self.view.setQuery(query);
+		if (query) 
+			self.onSearch();
+	}
+};
+})(smartSearch);
 
 $(function (){
-	smartSearch.init();
+	smartSearch.app.init();
 });
 </script>
 </html>
