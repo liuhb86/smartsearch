@@ -70,6 +70,7 @@ body {
 	margin: 4px 2px 0px 2px;
 }
 #barMinimize { background:url('img/window20.png') 0 0; }
+#barExpand.expanded {background:url('img/window20.png') -50px 0; }
 #barExpand { background:url('img/window20.png') -25px 0; }
 #barClose { background:url('img/window20.png') -75px 0; }
 </style>
@@ -191,6 +192,7 @@ var self = p.service = {
 
 (function (p) {
 var self = p.view = {
+	isExpanded : false,
 	setFrameUrl : function (url) { self.$resultFrame[0].src = url; },
 	setTitle : function (str) { document.title = str + " - BiLSearch"; },
 	setUrlHash : function () { window.location.hash = self.hash.toString(); },
@@ -214,8 +216,9 @@ var self = p.view = {
 		self.changeEngine(0);
 	},
 	adjustFrameHeight : function () {
-		//TODO: be more precise.
-		self.$resultFrame.height($(window).height()-4);
+		var h = $(window).height() - 4;				//TODO: where do the 4 come from?
+		if (self.isExpanded) h -= self.$searchBar.height() + 4;		//4 is searchBar padding
+		self.$resultFrame.height(h);
 	},
 	changeEngine : function (index) {
 		var $current;
@@ -227,12 +230,33 @@ var self = p.view = {
 	},
 	bindEvents : function () {
 		$(window).resize(self.adjustFrameHeight);
+		self.controlButton.$expand.click(function () {
+			self.isExpanded = !self.isExpanded;
+			if (self.isExpanded) {
+				$(this).addClass("expanded");
+				self.$searchBar.css("position", "static");
+			}
+			else {
+				$(this).removeClass("expanded");
+				self.$searchBar.css("position", "absolute");
+			}
+			self.adjustFrameHeight();
+		});
 	},
-	init : function () {
-		self.hash = $.query.load(window.location.hash);
+	bindElements : function () {
 		self.$resultFrame = $("#resultFrame");
 		self.$queryInput = $("#queryInput");
 		self.$searchButton = $("#searchButton");
+		self.$searchBar = $("#searchBar");
+		self.controlButton = {
+			$minimize : $("#barMinimize"),
+			$expand : $("#barExpand"),
+			$close : $("#barClose")
+		};
+	},
+	init : function () {
+		self.bindElements();
+		self.hash = $.query.load(window.location.hash);
 		self.adjustFrameHeight();
 		self.bindEvents();
 	}
@@ -258,14 +282,19 @@ var self= p.app = {
 		self.onSearch();
 	},
 	bindEvents : function () {
-		self.view.$searchButton.click(self.onSearch);
-		self.view.$queryInput.keypress(function (event) {
+		var view = self.view;
+		view.$searchButton.click(self.onSearch);
+		view.$queryInput.keypress(function (event) {
 			if	(event.which == 13) {
 				self.onSearch();
 			}
 		});
-		self.view.$searchEngineItems.click(function (){
+		view.$searchEngineItems.click(function (){
 			self.onChangeEngine($(this).attr("index"));
+		});
+		view.controlButton.$close.click(function () {
+			self.view.$searchBar.remove();
+			p = null;
 		});
 	},
 	init : function () {
