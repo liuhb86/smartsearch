@@ -24,7 +24,7 @@ body {
 	padding: 0;
 }
 #searchBar {
-	padding: 2px;
+	padding: 2px 0;
 	width: 100%;
 	position: absolute;
 	background-color: rgba(50,50,50,.5);
@@ -33,6 +33,7 @@ body {
 	background-color: rgb(50,50,50);
 }
 #queryInput {
+	margin-left: 2px;
 	width: 30%;
 }
 #searchEngines {
@@ -56,13 +57,34 @@ body {
 	height: 20px;
 	width: 20px;
 }
+#windowControl {
+	float: right;
+	margin-right: 20px;
+	overflow: hidden;
+}
+#windowControl a {
+	height : 20px;
+	width: 20px;
+	display: inline-block;
+	cursor: pointer;
+	margin: 4px 2px 0px 2px;
+}
+#barMinimize { background:url('img/window20.png') 0 0; }
+#barExpand { background:url('img/window20.png') -25px 0; }
+#barClose { background:url('img/window20.png') -75px 0; }
 </style>
 </head>
 <body>
+
 <div id="searchBar">
 	<input type="text" id="queryInput" />
 	<button id="searchButton">Search</button>
 	<ol id="searchEngines"></ol>
+	<span id="windowControl">
+		<a id="barMinimize"></a>
+		<a id="barExpand"></a>
+		<a id="barClose"></a>
+	</span>
 </div>
 <iframe id="resultFrame">
 </iframe>
@@ -192,7 +214,8 @@ var self = p.view = {
 		self.changeEngine(0);
 	},
 	adjustFrameHeight : function () {
-		self.$resultFrame.height($(window).height());
+		//TODO: be more precise.
+		self.$resultFrame.height($(window).height()-4);
 	},
 	changeEngine : function (index) {
 		var $current;
