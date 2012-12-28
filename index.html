@@ -80,6 +80,23 @@ html, body {
 #barExpand.expanded {background:url('img/window20.png') -50px 0; }
 #barExpand { background:url('img/window20.png') -25px 0; }
 #barClose { background:url('img/window20.png') -75px 0; }
+#searchHandle {
+	position: absolute;
+	left:0px;
+	top: 0px;
+	overflow: hidden;
+	display: none;
+}
+#barRestore {
+	cursor: pointer;
+}
+#barRestore img {
+	height: 20px;
+	width: 20px;
+	curssor: pointer;
+	margin:3px;
+}
+
 </style>
 </head>
 <body>
@@ -93,6 +110,9 @@ html, body {
 		<a id="barExpand" title="Expand"></a>
 		<a id="barClose" title="Close"></a>
 	</span>
+</div>
+<div id="searchHandle" >
+<a id="barRestore"><img src="img/logo.png"></a>
 </div>
 <iframe id="resultFrame">
 </iframe>
@@ -200,6 +220,7 @@ var self = p.service = {
 (function (p) {
 var self = p.view = {
 	isExpanded : false,
+	isHidden : false,
 	setFrameUrl : function (url) { self.$resultFrame[0].src = url; },
 	setTitle : function (str) { document.title = str + " - BiLSearch"; },
 	setUrlHash : function () { window.location.hash = self.hash.toString(); },
@@ -224,7 +245,7 @@ var self = p.view = {
 	},
 	adjustFrameHeight : function () {
 		var h = $(window).height() - 4;				//TODO: where do the 4 come from?
-		if (self.isExpanded) h -= self.$searchBar.height() + 4;		//4 is searchBar padding
+		if (self.isExpanded && !self.isHidden) h -= self.$searchBar.height() + 4;		//4 is searchBar padding
 		self.$resultFrame.height(h);
 	},
 	changeEngine : function (index) {
@@ -249,16 +270,30 @@ var self = p.view = {
 			}
 			self.adjustFrameHeight();
 		});
+		self.controlButton.$minimize.click(function () {
+			self.$isHidden = true;
+			self.$searchBar.hide();
+			self.$searchHandle.show();
+			self.adjustFrameHeight();
+		});
+		self.controlButton.$restore.click(function () {
+			self.$isHidden = false;
+			self.$searchHandle.hide();
+			self.$searchBar.show();
+			self.adjustFrameHeight();
+		});
 	},
 	bindElements : function () {
 		self.$resultFrame = $("#resultFrame");
 		self.$queryInput = $("#queryInput");
 		self.$searchButton = $("#searchButton");
 		self.$searchBar = $("#searchBar");
+		self.$searchHandle = $("#searchHandle");
 		self.controlButton = {
 			$minimize : $("#barMinimize"),
 			$expand : $("#barExpand"),
-			$close : $("#barClose")
+			$close : $("#barClose"),
+			$restore : $("#barRestore")
 		};
 	},
 	init : function () {
@@ -300,7 +335,9 @@ var self= p.app = {
 			self.onChangeEngine($(this).attr("index"));
 		});
 		view.controlButton.$close.click(function () {
-			self.view.$searchBar.remove();
+			view.isHidden = true;
+			view.$searchBar.remove();
+			view.$earchHandel.remove();
 			p = null;
 		});
 	},
