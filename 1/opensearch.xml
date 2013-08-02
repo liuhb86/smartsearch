@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"
                        xmlns:moz="http://www.mozilla.org/2006/browser/search/">
-  <ShortName>Multi</ShortName>
-  <Description>Search with multiple engines</Description>
+  <ShortName>Smart</ShortName>
+  <Description>Smart MultiSearch</Description>
   <InputEncoding>UTF-8</InputEncoding>
-  <Image width="16" height="16" type="image/png">http://mulsearch.sinaapp.com/img/favicon.png</Image>
-  <Url type="text/html" method="GET" template="http://mulsearch.sinaapp.com/?q={searchTerms}" />
+  <Image width="16" height="16" type="image/png">http://162.105.81.246/multisearch/img/favicon.png</Image>
+  <Url type="text/html" method="GET" template="http://162.105.81.246/multisearch/?q={searchTerms}" />
   <moz:SearchForm>searchFormURL</moz:SearchForm>
 </OpenSearchDescription>
