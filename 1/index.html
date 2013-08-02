@@ -159,6 +159,11 @@ var self = p.service = {
 			icon :"img/favicon/baidu.png",
 			url : "http://www.baidu.com/s?ie=utf-8&wd="
 		},
+		startpage : {
+			title : "Startpage",
+			icon : "img/favicon/startpage.png",
+			url : "https://www.startpage.com/do/search?cat=web&prf=81a71b54ed92aca2522cd1b4c25243e6&query="
+		},
 		bing: {
 			title : "Bing",
 			icon :"img/favicon/bing.png",
@@ -184,7 +189,7 @@ var self = p.service = {
 				break;
 			}
 		}
-		strEngine = isPureAscii ? "google" : "baidu";
+		strEngine = isPureAscii ? "startpage" : "baidu";
 		return self.searchEngines[strEngine];
 	},
 	chooseEngine : function (query) {
