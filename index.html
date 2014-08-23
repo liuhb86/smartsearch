@@ -119,6 +119,7 @@ html, body {
 
 <script src="js/lib/jquery-1.8.3.min.js" type="text/javascript"></script>
 <script src="js/lib/jquery.query-2.1.7.min.js" type="text/javascript"></script>
+<script src="js/lib/jquery.cookie.js" type="text/javascript"></script>
 <script src="js/lib/jsrender.js" type="text/javascript"></script>
 
 <script id="searchEngineTmpl" type="text/x-jsrender" data-for="searchEngines">
@@ -141,9 +142,34 @@ smartSearch.util = {
 		return "http://www.google.com/s2/favicons?domain=" + domain;
 	}
 };
+
+(function(p) {
+var self = p.config = {
+	cookies : {},
+	loadAll : function () {
+		self.cookies = $.cookie();
+	},
+	set :function (name, val) {
+		self.cookies[name] = val;
+		$.cookie(name, val);
+	},
+	get: function (name) {
+		return self.cookies[name];
+	}
+};
+})(smartSearch);
+
 (function(p) {
 var self = p.service = {
-	config : {
+	config : p.config,
+	configOp : {
+		setSmartEN : function () {
+			if (self.runtime.activeEngine != self.searchEngines.smart)
+			{
+				self.runtime.smartEN = self.runtime.activeEngine;
+				self.config.set("smartEN", self.runtime.activeEngine.id);
+			}
+		}
 	},
 	runtime : {
 		engineList : []
@@ -185,7 +211,7 @@ var self = p.service = {
 		return engine.icon; 
 	},
 	chooseEngineByContent : function (query) {
-		var i, strEngine, 
+		var i, engine, 
 			isPureAscii = true;
 		for (i = 0; i < query.length; ++i) {
 			if (query.charCodeAt(i) > 127) {
@@ -193,8 +219,8 @@ var self = p.service = {
 				break;
 			}
 		}
-		strEngine = isPureAscii ? "startpage" : "baidu";
-		return self.searchEngines[strEngine];
+		engine = isPureAscii ? self.runtime.smartEN : self.runtime.smartCN;
+		return engine;
 	},
 	chooseEngine : function (query) {
 		if (self.runtime.activeEngine !== self.searchEngines.smart) 
@@ -223,6 +249,19 @@ var self = p.service = {
 			engine.id = i;
 			self.getIconForSearchEngine(engine);
 			self.runtime.engineList.push(engine);
+		}
+		self.config.loadAll();
+		
+		self.runtime.smartEN = self.searchEngines.startpage;
+		self.runtime.smartCN = self.searchEngines.baidu;
+ 
+		if (self.config.get("smartEN"))
+		{
+			var en = self.searchEngines[self.config.get("smartEN")];
+			if (en)
+			{
+				self.runtime.smartEN = en;
+			}
 		}
 		self.runtime.activeEngine = self.searchEngines.smart;
 	}
@@ -324,6 +363,11 @@ var self= p.app = {
 	onSearch : function () {
 		var query, navUrl;
 		query = self.view.getQuery();
+		if (query.match(/^:set/))
+		{
+			self.execute(query);
+			return;
+		}
 		navUrl = self.service.getSearchUrl(query);
 		self.view.setTitle(query);
 		self.view.setUrlQuery(query);
@@ -364,6 +408,14 @@ var self= p.app = {
 		self.view.setQuery(query);
 		if (query) 
 			self.onSearch();
+	},
+	execute : function(command) {
+		var succeed = false;
+		if (command == ":set smarten") {
+			self.service.configOp.setSmartEN();		
+			succeed = true;
+		}
+		self.view.setQuery(succeed);
 	}
 };
 })(smartSearch);
